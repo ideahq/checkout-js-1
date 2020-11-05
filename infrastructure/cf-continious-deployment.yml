@@ -115,7 +115,7 @@ Resources:
                 FilterGroups:
                     - - Type: HEAD_REF
                         ExcludeMatchedPattern: false
-                        Pattern: main
+                        Pattern: master
 
                       - Type: EVENT
                         Pattern: PUSH
