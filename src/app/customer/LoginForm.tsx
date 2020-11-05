@@ -99,10 +99,9 @@ const LoginForm: FunctionComponent<LoginFormProps & WithLanguageProps & FormikPr
                     </Alert> }
 
                 { viewType === CustomerViewType.Login && <p>
-                    <TranslatedHtml
-                        data={ { url: createAccountUrl } }
-                        id="customer.create_account_to_continue_text"
-                    />
+                    Don’t have an account?&nbsp;
+                    <a onClick={ preventDefault(onCancel) }>Create an account</a>
+                    &nbsp;to continue.
                 </p> }
 
                 { viewType === CustomerViewType.CancellableEnforcedLogin &&

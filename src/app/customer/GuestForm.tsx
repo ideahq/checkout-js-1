@@ -8,6 +8,7 @@ import { Button, ButtonVariant } from '../ui/button';
 import { BasicFormField, Fieldset, Form, Legend  } from '../ui/form';
 
 import EmailField from './EmailField';
+import PasswordField from './PasswordField';
 import SubscribeField from './SubscribeField';
 
 export interface GuestFormProps {
@@ -26,6 +27,7 @@ export interface GuestFormProps {
 export interface GuestFormValues {
     email: string;
     shouldSubscribe: boolean;
+    password: string;
 }
 
 const GuestForm: FunctionComponent<GuestFormProps & WithLanguageProps & FormikProps<GuestFormValues>> = ({
@@ -60,12 +62,13 @@ const GuestForm: FunctionComponent<GuestFormProps & WithLanguageProps & FormikPr
                 }
             >
                 <p>
-                    <TranslatedHtml id="customer.checkout_as_guest_text" />
+                    <TranslatedHtml id="customer.create_account" />
                 </p>
 
                 <div className="customerEmail-container">
                     <div className="customerEmail-body">
                         <EmailField onChange={ onChangeEmail } />
+                        <PasswordField forgotPasswordUrl={ '' } />
 
                         { (canSubscribe || requiresMarketingConsent) && <BasicFormField
                             name="shouldSubscribe"
@@ -77,7 +80,7 @@ const GuestForm: FunctionComponent<GuestFormProps & WithLanguageProps & FormikPr
                         /> }
                     </div>
 
-                    <div className="form-actions customerEmail-action">
+                    <div className="form-actions ">
                         <Button
                             className="customerEmail-button"
                             id="checkout-customer-continue"
@@ -86,7 +89,7 @@ const GuestForm: FunctionComponent<GuestFormProps & WithLanguageProps & FormikPr
                             type="submit"
                             variant={ ButtonVariant.Primary }
                         >
-                            <TranslatedString id="customer.continue_as_guest_action" />
+                            <TranslatedString id="common.continue_action" />
                         </Button>
                     </div>
                 </div>
@@ -116,6 +119,7 @@ export default withLanguage(withFormik<GuestFormProps & WithLanguageProps, Guest
         requiresMarketingConsent,
     }) => ({
         email,
+        password: '',
         shouldSubscribe: requiresMarketingConsent ? false : defaultShouldSubscribe,
         privacyPolicy: false,
     }),
@@ -128,7 +132,14 @@ export default withLanguage(withFormik<GuestFormProps & WithLanguageProps, Guest
             .max(256)
             .required(language.translate('customer.email_required_error'));
 
-        const baseSchema = object({ email });
+        const password = string()
+                .required(language.translate('customer.password_required_error'))
+                .matches(/[0-9]/, language.translate('customer.password_number_required_error'))
+                .matches(/[a-zA-Z]/, language.translate('customer.password_letter_required_error'))
+                .min(7, language.translate('customer.password_under_minimum_length_error'))
+                .max(100, language.translate('customer.password_over_maximum_length_error'));
+
+        const baseSchema = object({ email, password });
 
         if (privacyPolicyUrl) {
             return baseSchema.concat(getPrivacyPolicyValidationSchema({

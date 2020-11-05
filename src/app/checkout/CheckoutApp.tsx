@@ -52,6 +52,7 @@ export default class CheckoutApp extends Component<CheckoutAppProps> {
                     <CheckoutProvider checkoutService={ this.checkoutService }>
                         <Checkout
                             { ...this.props }
+                            checkoutService={ this.checkoutService }
                             createEmbeddedMessenger={ createEmbeddedCheckoutMessenger }
                             createStepTracker={ this.createStepTracker }
                             embeddedStylesheet={ this.embeddedStylesheet }

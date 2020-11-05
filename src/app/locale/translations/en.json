@@ -95,6 +95,8 @@
         },
         "customer": {
             "checkout_as_guest_text": "Checking out as a <strong>Guest</strong>? You'll be able to save your details to create an account with us later.",
+            "create_account": "Enter a password to create an account. We'll save your details for next time.",
+            "continue_action": "Continue",
             "continue_as_guest_action": "Continue as guest",
             "create_account_action": "Create Account",
             "create_account_error": "An error occurred while creating your account. Please try again.",
