@@ -1,0 +1,135 @@
+# aws --profile ecomhq cloudformation update-stack --stack-name petdirect-checkout-cd --capabilities CAPABILITY_NAMED_IAM --template-body file://cf-continious-deployment.yml
+#
+Parameters:
+    GithubUrl:
+        Default: https://github.com/ideahq/checkout-js.git
+        Type: String
+
+Mappings:
+    RegionMap:
+        us-east-1:
+            S3hostedzoneID: Z3AQBSTGFYJSTF
+            websiteendpoint: s3-website-us-east-1.amazonaws.com
+        us-west-1:
+            S3hostedzoneID: Z2F56UZL2M1ACD
+            websiteendpoint: s3-website-us-west-1.amazonaws.com
+        us-west-2:
+            S3hostedzoneID: Z3BJ6K6RIION7M
+            websiteendpoint: s3-website-us-west-2.amazonaws.com
+        eu-west-1:
+            S3hostedzoneID: Z1BKCTXD74EZPE
+            websiteendpoint: s3-website-eu-west-1.amazonaws.com
+        ap-southeast-1:
+            S3hostedzoneID: Z3O0J2DXBE1FTB
+            websiteendpoint: s3-website-ap-southeast-1.amazonaws.com
+        ap-southeast-2:
+            S3hostedzoneID: Z1WCIGYICN2BYD
+            websiteendpoint: s3-website-ap-southeast-2.amazonaws.com
+        ap-northeast-1:
+            S3hostedzoneID: Z2M4EHUR26P7ZW
+            websiteendpoint: s3-website-ap-northeast-1.amazonaws.com
+        sa-east-1:
+            S3hostedzoneID: Z31GFT0UA1I2HV
+            websiteendpoint: s3-website-sa-east-1.amazonaws.com
+
+Resources:
+
+    ArtifactsBucket:
+        Type: AWS::S3::Bucket
+        Properties:
+            BucketName: checkout-js.petdirect.co.nz
+            AccessControl: PublicRead
+            WebsiteConfiguration:
+                IndexDocument: index.html
+                ErrorDocument: 404.html
+
+    CodeBuildServiceRole:
+        Type: AWS::IAM::Role
+        Properties:
+            RoleName: !Sub CodeBuildRole-${AWS::StackName}
+            AssumeRolePolicyDocument:
+                Version: "2012-10-17"
+                Statement:
+                    -
+                        Effect: "Allow"
+                        Principal:
+                            Service:
+                                - "codebuild.amazonaws.com"
+                        Action:
+                            - "sts:AssumeRole"
+            Path: /service-role/
+            Policies:
+                -
+                    PolicyName: "CodeBuildAccessPolicies"
+                    PolicyDocument:
+                        Version: "2012-10-17"
+                        Statement:
+                            - Effect: "Allow"
+                              Action:
+                                  - "logs:CreateLogGroup"
+                                  - "logs:CreateLogStream"
+                                  - "logs:PutLogEvents"
+                              Resource:
+                                  - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/*
+                            - Effect: "Allow"
+                              Action:
+                                  - "iam:PassRole"
+                                  - "events:PutEvents"
+                              Resource: "*"
+                            - Action:
+                                  - s3:PutObjectAcl
+                                  - s3:PutObject
+                                  - s3:GetObject
+                                  - s3:GetObjectVersion
+                              Effect: Allow
+                              Resource:
+                                  - !Join
+                                      - ''
+                                      - - 'arn:aws:s3:::'
+                                        - !Ref 'ArtifactsBucket'
+                                  - !Join
+                                      - ''
+                                      - - 'arn:aws:s3:::'
+                                        - !Ref 'ArtifactsBucket'
+                                        - /*
+
+    CodeBuildProject:
+        Type: AWS::CodeBuild::Project
+        Properties:
+            Name: !Sub ${AWS::StackName}-prod
+            ServiceRole: !GetAtt CodeBuildServiceRole.Arn
+            Artifacts:
+                Type: NO_ARTIFACTS
+            Environment:
+                Type: LINUX_CONTAINER
+                ComputeType: BUILD_GENERAL1_SMALL
+                Image: aws/codebuild/standard:4.0
+            Source:
+                Auth:
+                    Type: OAUTH
+                Location: !Ref GithubUrl
+                Type: GITHUB
+                BuildSpec: infrastructure/buildspec.yml
+            Triggers:
+                Webhook: true
+                FilterGroups:
+                    - - Type: HEAD_REF
+                        ExcludeMatchedPattern: false
+                        Pattern: main
+
+                      - Type: EVENT
+                        Pattern: PUSH
+            TimeoutInMinutes: 30
+
+    DnsRecord:
+        Type: AWS::Route53::RecordSetGroup
+        Properties:
+            HostedZoneName: petdirect.co.nz.
+            Comment: Public Design Documents
+            RecordSets:
+                -   Name: checkout-js.petdirect.co.nz
+                    Type: A
+                    AliasTarget:
+                        HostedZoneId: !FindInMap [ RegionMap, !Ref 'AWS::Region', S3hostedzoneID]
+                        DNSName: !FindInMap [ RegionMap, !Ref 'AWS::Region', websiteendpoint]
+

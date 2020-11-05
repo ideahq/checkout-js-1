@@ -1,0 +1,28 @@
+version: 0.2
+
+phases:
+    install:
+        runtime-versions:
+            nodejs: 12
+    pre_build:
+        commands:
+            - npm install
+    build:
+        commands:
+            - npm run build
+            - aws s3 cp --recursive dist/ s3://checkout-js.petdirect.co.nz --acl public-read
+            - LOG=$(git log -1 --format=format:"%an has updated checkout-js.petdirect.co.nz%n> %s %n")
+            - echo $LOG | grep -v quiet
+            - |
+                curl -i -X POST \
+                    -H "Content-Type: application/json" \
+                    -d "{\"text\":\"$LOG\",\"channel\":\"#developers\"}" \
+                    -XPOST https://hooks.slack.com/services/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
+    post_build:
+        commands:
+            - echo "build completed on `date`"
+
+artifacts:
+    files:
+        - dist/*
+    discard-paths: yes
